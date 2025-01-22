@@ -1,7 +1,6 @@
 name: SonarQube Local Analysis with Vulnerable Repository
 
-on: push:
-
+on: workflow_dispatch
 jobs:
   sonarqube:
     runs-on: ubuntu-latest
