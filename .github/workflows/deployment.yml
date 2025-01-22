@@ -1,0 +1,88 @@
+name: SonarQube Local Analysis with Vulnerable Repository
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sonarqube:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Check out workflow repository
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Step 2: Download a known vulnerable repository (OWASP Juice Shop)
+    - name: Download Vulnerable Repository
+      run: |
+        git clone https://github.com/juice-shop/juice-shop.git vulnerable-repo
+        cd vulnerable-repo
+        git checkout v15.1.1  # Optional: Use a specific release
+        cd ..
+
+    # Step 3: Set up JDK
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    # Step 4: Start SonarQube Docker Container
+    - name: Start SonarQube
+      run: |
+        docker run -d --name sonarqube -p 9000:9000 sonarqube:lts
+        # Wait for SonarQube to initialize
+        for i in {1..30}; do
+          if curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; then
+            echo "SonarQube is up and running!"
+            break
+          fi
+          echo "Waiting for SonarQube to be ready..."
+          sleep 5
+        done
+
+    # Step 5: Download Sonar Scanner
+    - name: Download Sonar Scanner
+      run: |
+        curl -sSLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+        unzip -q sonar-scanner-cli.zip
+        export PATH=$PWD/sonar-scanner-5.0.1.3006-linux/bin:$PATH
+
+    # Step 6: Run SonarQube Scanner on the Vulnerable Repository
+    - name: Run SonarQube Scanner
+      run: |
+        export SONAR_HOST_URL=http://localhost:9000
+        export SONAR_LOGIN=admin
+        export SONAR_PASSWORD=admin
+
+        cd vulnerable-repo
+
+        sonar-scanner \
+          -Dsonar.projectKey=owasp_juice_shop \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=$SONAR_HOST_URL \
+          -Dsonar.login=$SONAR_LOGIN \
+          -Dsonar.password=$SONAR_PASSWORD \
+          -Dsonar.report.export.path=../sonar-report.json
+
+        cd ..
+
+    # Step 7: Save SonarQube Report as an Artifact
+    - name: Upload SonarQube Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: sonar-report
+        path: sonar-report.json
+
+    # Step 8: Clean up Docker Container
+    - name: Clean up
+      run: |
+        docker stop sonarqube
+        docker rm sonarqube
+        rm -rf sonar-scanner-5.0.1.3006-linux sonar-scanner-cli.zip vulnerable-repo sonar-report.json
+
