@@ -6,17 +6,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Check out workflow repository
-    - name: Checkout Code
-      uses: actions/checkout@v3
-
-    # Step 2: Download a known vulnerable repository (OWASP Juice Shop)
-    - name: Download Vulnerable Repository
-      run: |
-        git clone https://github.com/juice-shop/juice-shop.git vulnerable-repo
-        cd vulnerable-repo
-        git checkout v15.1.1  # Optional: Use a specific release
-        cd ..
 
     # Step 3: Set up JDK
     - name: Set up JDK
@@ -53,7 +42,6 @@ jobs:
         export SONAR_LOGIN=admin
         export SONAR_PASSWORD=admin
 
-        cd vulnerable-repo
 
         sonar-scanner \
           -Dsonar.projectKey=owasp_juice_shop \
