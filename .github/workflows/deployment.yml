@@ -51,7 +51,6 @@ jobs:
           -Dsonar.password=$SONAR_PASSWORD \
           -Dsonar.report.export.path=../sonar-report.json
 
-        cd ..
 
     # Step 7: Save SonarQube Report as an Artifact
     - name: Upload SonarQube Report
