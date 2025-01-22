@@ -6,15 +6,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Check out Code
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-    # Step 3: Set up JDK
+    # Step 2: Set up JDK
     - name: Set up JDK
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # Step 4: Start SonarQube Docker Container
+    # Step 3: Start SonarQube Docker Container
     - name: Start SonarQube
       run: |
         docker run -d --name sonarqube -p 9000:9000 sonarqube:lts
@@ -28,41 +31,39 @@ jobs:
           sleep 5
         done
 
-    # Step 5: Download Sonar Scanner
+    # Step 4: Download Sonar Scanner
     - name: Download Sonar Scanner
       run: |
         curl -sSLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
         unzip -q sonar-scanner-cli.zip
-        export PATH=$PWD/sonar-scanner-5.0.1.3006-linux/bin:$PATH
+        echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
 
-    # Step 6: Run SonarQube Scanner on the Vulnerable Repository
+    # Step 5: Run SonarQube Scanner on Juice Shop
     - name: Run SonarQube Scanner
       run: |
         export SONAR_HOST_URL=http://localhost:9000
         export SONAR_LOGIN=admin
         export SONAR_PASSWORD=admin
 
-
         sonar-scanner \
           -Dsonar.projectKey=owasp_juice_shop \
-          -Dsonar.sources=. \
+          -Dsonar.sources=juice-shop \
           -Dsonar.host.url=$SONAR_HOST_URL \
           -Dsonar.login=$SONAR_LOGIN \
           -Dsonar.password=$SONAR_PASSWORD \
-          -Dsonar.report.export.path=../sonar-report.json
+          -Dsonar.report.export.path=sonar-report.json
 
-
-    # Step 7: Save SonarQube Report as an Artifact
+    # Step 6: Save SonarQube Report as an Artifact
     - name: Upload SonarQube Report
       uses: actions/upload-artifact@v3
       with:
         name: sonar-report
         path: sonar-report.json
 
-    # Step 8: Clean up Docker Container
+    # Step 7: Clean up Docker Container
     - name: Clean up
       run: |
         docker stop sonarqube
         docker rm sonarqube
-        rm -rf sonar-scanner-5.0.1.3006-linux sonar-scanner-cli.zip vulnerable-repo sonar-report.json
+        rm -rf sonar-scanner-5.0.1.3006-linux sonar-scanner-cli.zip sonar-report.json
 
